@@ -10,6 +10,9 @@
 #include <random/rand32.h>
 #include <drivers/gpio.h>
 
+#include <logging/log.h>
+LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
+
 #define LED0	DT_GPIO_LABEL(DT_ALIAS(led0), gpios)
 #define PIN	DT_GPIO_PIN(DT_ALIAS(led0), gpios)
 #define FLAGS	DT_GPIO_FLAGS(DT_ALIAS(led0), gpios)
@@ -25,6 +28,8 @@ static void sleep_and_reboot(void)
 	uint32_t sleep_time_max = 15000;
 	uint32_t sleep_time = 250 + sys_rand32_get() % sleep_time_max;
 
+
+	LOG_DBG("sleep time %u", sleep_time);
 	k_sleep(K_MSEC(sleep_time));
 	sys_reboot(SYS_REBOOT_WARM);
 }
