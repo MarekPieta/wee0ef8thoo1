@@ -5,51 +5,49 @@
  */
 
 #include <zephyr.h>
-#include <usb/usb_device.h>
 #include <power/reboot.h>
-#include <random/rand32.h>
 #include <drivers/gpio.h>
 
 #include <logging/log.h>
 LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
-#define LED0	DT_GPIO_LABEL(DT_ALIAS(led0), gpios)
-#define PIN	DT_GPIO_PIN(DT_ALIAS(led0), gpios)
-#define FLAGS	DT_GPIO_FLAGS(DT_ALIAS(led0), gpios)
+#define LED0	"GPIO_0"
+#define PIN	5
+
+const struct device *led_dev;
 
 void assert_post_action(const char *file, unsigned int line)
 {
-	__asm volatile ("bkpt #0\n");
-	sys_reboot(SYS_REBOOT_WARM);
-}
+	static struct k_spinlock lock;
 
-static void sleep_and_reboot(void)
-{
-	uint32_t sleep_time_max = 15000;
-	uint32_t sleep_time = 250 + sys_rand32_get() % sleep_time_max;
-
-
-	LOG_DBG("sleep time %u", sleep_time);
-	k_sleep(K_MSEC(sleep_time));
-	sys_reboot(SYS_REBOOT_WARM);
+	k_spinlock_key_t key = k_spin_lock(&lock);
+	while(1){
+	}
+	k_spin_unlock(&lock, key);
 }
 
 void main(void)
 {
-	const struct device *led_dev;
-
 	led_dev = device_get_binding(LED0);
-	if (gpio_pin_configure(led_dev, PIN, GPIO_OUTPUT_ACTIVE | FLAGS)) {
+
+	if (gpio_pin_configure(led_dev, PIN, GPIO_OUTPUT)) {
 		return;
 	}
 
-	if (usb_enable(NULL)) {
+	if (gpio_pin_set_raw(led_dev, PIN, 1)) {
 		return;
 	}
 
-	while (1) {
-		gpio_pin_set(led_dev, PIN, 1);
-		sleep_and_reboot();
-		gpio_pin_set(led_dev, PIN, 0);
+	k_sleep(K_MSEC(1));
+
+	if (gpio_pin_set_raw(led_dev, PIN, 0)) {
+		return;
 	}
+
+	k_sleep(K_MSEC(1));
+
+	if (gpio_pin_set_raw(led_dev, PIN, 1)) {
+		return;
+	}
+	sys_reboot(SYS_REBOOT_WARM);
 }
